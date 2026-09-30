@@ -1,3 +1,4 @@
+```groovy
 pipeline {
 
     agent any
@@ -16,6 +17,9 @@ pipeline {
 
         K8S_NAMESPACE =
             "karan-dashboard"
+
+        APP_PORT =
+            "5050"
     }
 
     stages {
@@ -23,7 +27,6 @@ pipeline {
         stage("Checkout") {
             steps {
                 echo "Downloading source code from GitHub..."
-
                 checkout scm
             }
         }
@@ -31,7 +34,6 @@ pipeline {
         stage("Python Syntax Check") {
             steps {
                 echo "Checking Python syntax..."
-
                 sh """
                     python3 -m py_compile app.py
                 """
@@ -41,10 +43,8 @@ pipeline {
         stage("Install Dependencies") {
             steps {
                 echo "Installing Python dependencies..."
-
                 sh """
                     python3 -m venv .jenkins-venv
-
                     .jenkins-venv/bin/pip install \
                         -r requirements.txt
                 """
@@ -54,7 +54,6 @@ pipeline {
         stage("Run Tests") {
             steps {
                 echo "Running Python unit tests..."
-
                 sh """
                     .jenkins-venv/bin/python \
                     -m unittest \
@@ -68,7 +67,6 @@ pipeline {
         stage("Build Docker Image") {
             steps {
                 echo "Building Docker image..."
-
                 sh """
                     docker build \
                         -t ${IMAGE_REPO}:${IMAGE_TAG} \
@@ -87,16 +85,13 @@ pipeline {
                         usernamePassword(
                             credentialsId:
                                 "dockerhub-credentials",
-
                             usernameVariable:
                                 "DOCKERHUB_USERNAME",
-
                             passwordVariable:
                                 "DOCKERHUB_PASSWORD"
                         )
                     ]
                 ) {
-
                     sh '''
                         set -e
 
@@ -144,6 +139,47 @@ pipeline {
                 '''
             }
         }
+
+        stage("Start Port Forward") {
+            steps {
+                echo "Starting Kubernetes port-forward..."
+
+                sh '''
+                    set -e
+
+                    # Stop old port-forward if running
+                    pkill -f \
+                        'kubectl port-forward.*karan-devops-dashboard-service' \
+                        || true
+
+                    # Start new port-forward
+                    nohup kubectl port-forward \
+                        svc/karan-devops-dashboard-service \
+                        ${APP_PORT}:5000 \
+                        -n "$K8S_NAMESPACE" \
+                        > /tmp/karan-devops-port-forward.log 2>&1 &
+
+                    echo "Waiting for port-forward..."
+
+                    for i in {1..10}
+                    do
+                        if curl -sf \
+                            http://localhost:${APP_PORT}/health \
+                            > /dev/null
+                        then
+                            echo "Port-forward is ready."
+                            break
+                        fi
+
+                        sleep 2
+                    done
+
+                    echo
+                    echo "Application URL:"
+                    echo "http://localhost:${APP_PORT}"
+                '''
+            }
+        }
     }
 
     post {
@@ -159,6 +195,12 @@ pipeline {
 
                 Namespace:
                 ${K8S_NAMESPACE}
+
+                Application:
+                http://localhost:${APP_PORT}
+
+                Health:
+                http://localhost:${APP_PORT}/health
                 ==========================================
             """
         }
@@ -166,6 +208,7 @@ pipeline {
         failure {
             echo """
                 ==========================================
+                Karan DevOps Dashboard
                 Jenkins pipeline failed.
 
                 Check Jenkins console output.
@@ -181,12 +224,22 @@ pipeline {
                     -n "$K8S_NAMESPACE" \
                     || true
 
+                echo
                 echo "Kubernetes Services:"
 
                 kubectl get svc \
                     -n "$K8S_NAMESPACE" \
                     || true
+
+                echo
+                echo "Port-forward process:"
+
+                ps aux | grep \
+                    '[k]ubectl port-forward' \
+                    || true
             '''
         }
     }
 }
+```
+
