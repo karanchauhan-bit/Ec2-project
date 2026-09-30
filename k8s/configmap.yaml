@@ -1,0 +1,25 @@
+apiVersion: v1
+
+kind: ConfigMap
+
+metadata:
+
+  name: karan-dashboard-config
+
+  namespace: karan-dashboard
+
+data:
+
+  APP_NAME: "Karan DevOps Dashboard"
+
+  APP_VERSION: "2.0.0"
+
+  ENVIRONMENT: "kubernetes"
+
+  DB_HOST: "karan-mysql-service"
+
+  DB_PORT: "3306"
+
+  DB_NAME: "karan_dashboard"
+
+  DB_USER: "karan"

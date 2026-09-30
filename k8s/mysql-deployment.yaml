@@ -1,0 +1,149 @@
+apiVersion: apps/v1
+
+kind: Deployment
+
+metadata:
+
+  name: karan-mysql
+
+  namespace: karan-dashboard
+
+spec:
+
+  replicas: 1
+
+  selector:
+
+    matchLabels:
+
+      app: karan-mysql
+
+  template:
+
+    metadata:
+
+      labels:
+
+        app: karan-mysql
+
+    spec:
+
+      containers:
+
+        - name: mysql
+
+          image: mysql:8.4
+
+          ports:
+
+            - containerPort: 3306
+
+          env:
+
+            - name: MYSQL_DATABASE
+
+              valueFrom:
+
+                configMapKeyRef:
+
+                  name: karan-dashboard-config
+
+                  key: DB_NAME
+
+            - name: MYSQL_USER
+
+              valueFrom:
+
+                configMapKeyRef:
+
+                  name: karan-dashboard-config
+
+                  key: DB_USER
+
+            - name: MYSQL_PASSWORD
+
+              valueFrom:
+
+                secretKeyRef:
+
+                  name: karan-mysql-secret
+
+                  key: MYSQL_PASSWORD
+
+            - name: MYSQL_ROOT_PASSWORD
+
+              valueFrom:
+
+                secretKeyRef:
+
+                  name: karan-mysql-secret
+
+                  key: MYSQL_ROOT_PASSWORD
+
+          volumeMounts:
+
+            - name: mysql-storage
+
+              mountPath: /var/lib/mysql
+
+          readinessProbe:
+
+            exec:
+
+              command:
+
+                - sh
+
+                - -c
+
+                - mysqladmin ping -h 127.0.0.1 -u root -p"$MYSQL_ROOT_PASSWORD"
+
+            initialDelaySeconds: 20
+
+            periodSeconds: 10
+
+            timeoutSeconds: 5
+
+            failureThreshold: 6
+
+          livenessProbe:
+
+            exec:
+
+              command:
+
+                - sh
+
+                - -c
+
+                - mysqladmin ping -h 127.0.0.1 -u root -p"$MYSQL_ROOT_PASSWORD"
+
+            initialDelaySeconds: 40
+
+            periodSeconds: 20
+
+            timeoutSeconds: 5
+
+            failureThreshold: 3
+
+          resources:
+
+            requests:
+
+              cpu: 100m
+
+              memory: 256Mi
+
+            limits:
+
+              cpu: 500m
+
+              memory: 512Mi
+
+      volumes:
+
+        - name: mysql-storage
+
+          persistentVolumeClaim:
+
+            claimName: karan-mysql-pvc

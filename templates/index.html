@@ -1,0 +1,395 @@
+<!DOCTYPE html>
+
+<html lang="en">
+
+<head>
+
+    <meta charset="UTF-8">
+
+    <meta
+        name="viewport"
+        content="width=device-width, initial-scale=1.0"
+    >
+
+    <meta
+        name="description"
+        content="Karan DevOps Dashboard"
+    >
+
+    <title>
+        {{ app_name }}
+    </title>
+
+    <link
+        rel="stylesheet"
+        href="{{ url_for(
+            'static',
+            filename='css/style.css'
+        ) }}"
+    >
+
+</head>
+
+<body>
+
+<header class="topbar">
+
+    <div class="brand">
+
+        <div class="brand-icon">
+            KD
+        </div>
+
+        <div>
+
+            <h1>
+                {{ app_name }}
+            </h1>
+
+            <p>
+                DevOps Learning & Deployment Dashboard
+            </p>
+
+        </div>
+
+    </div>
+
+    <div class="environment-badge">
+        {{ environment }}
+    </div>
+
+</header>
+
+
+<main class="container">
+
+    <section class="hero">
+
+        <div>
+
+            <p class="eyebrow">
+                DEVOPS PROJECT
+            </p>
+
+            <h2>
+                Flask + MySQL + Docker
+                + Jenkins + Kubernetes
+            </h2>
+
+            <p class="hero-text">
+
+                A practical DevOps dashboard demonstrating
+                Git, automated testing, Docker image creation,
+                Docker Hub publishing, Kubernetes deployment
+                and application health checks.
+
+            </p>
+
+            <button
+                id="healthButton"
+                class="primary-button"
+            >
+                Run Health Check
+            </button>
+
+            <p
+                id="healthMessage"
+                class="health-message"
+            >
+                Checking application health...
+            </p>
+
+        </div>
+
+        <div class="hero-card">
+
+            <span class="hero-card-label">
+                VERSION
+            </span>
+
+            <strong>
+                {{ version }}
+            </strong>
+
+            <span>
+                {{ environment }}
+            </span>
+
+        </div>
+
+    </section>
+
+
+    <section class="stats-grid">
+
+        <article class="stat-card">
+
+            <span class="stat-label">
+                APPLICATION
+            </span>
+
+            <strong id="applicationStatus">
+                Checking...
+            </strong>
+
+            <span>
+                Flask + Gunicorn
+            </span>
+
+        </article>
+
+
+        <article class="stat-card">
+
+            <span class="stat-label">
+                DATABASE
+            </span>
+
+            <strong id="databaseStatus">
+                Checking...
+            </strong>
+
+            <span>
+                MySQL
+            </span>
+
+        </article>
+
+
+        <article class="stat-card">
+
+            <span class="stat-label">
+                CONTAINER
+            </span>
+
+            <strong>
+                Docker
+            </strong>
+
+            <span>
+                Port 5000
+            </span>
+
+        </article>
+
+
+        <article class="stat-card">
+
+            <span class="stat-label">
+                ORCHESTRATION
+            </span>
+
+            <strong>
+                Kubernetes
+            </strong>
+
+            <span>
+                EC2 ready
+            </span>
+
+        </article>
+
+    </section>
+
+
+    <section class="content-grid">
+
+        <article class="panel">
+
+            <div class="panel-header">
+
+                <div>
+
+                    <p class="eyebrow">
+                        DATABASE
+                    </p>
+
+                    <h3>
+                        Skill Matrix
+                    </h3>
+
+                </div>
+
+                <span class="panel-status">
+                    MySQL
+                </span>
+
+            </div>
+
+            <div
+                id="skillsContainer"
+                class="skills-container"
+            >
+                Loading skills...
+            </div>
+
+        </article>
+
+
+        <article class="panel">
+
+            <div class="panel-header">
+
+                <div>
+
+                    <p class="eyebrow">
+                        CI/CD
+                    </p>
+
+                    <h3>
+                        Jenkins Pipeline
+                    </h3>
+
+                </div>
+
+                <span class="panel-status">
+                    Automated
+                </span>
+
+            </div>
+
+            <div
+                id="pipelineList"
+                class="pipeline-list"
+            >
+                Loading pipeline...
+            </div>
+
+        </article>
+
+    </section>
+
+
+    <section class="panel system-panel">
+
+        <div class="panel-header">
+
+            <div>
+
+                <p class="eyebrow">
+                    RUNTIME
+                </p>
+
+                <h3>
+                    System Information
+                </h3>
+
+            </div>
+
+        </div>
+
+        <div
+            id="systemInfo"
+            class="system-grid"
+        >
+
+            <div class="system-item">
+
+                <span>
+                    Hostname
+                </span>
+
+                <strong id="hostname">
+                    -
+                </strong>
+
+            </div>
+
+
+            <div class="system-item">
+
+                <span>
+                    Platform
+                </span>
+
+                <strong id="platform">
+                    -
+                </strong>
+
+            </div>
+
+
+            <div class="system-item">
+
+                <span>
+                    Python
+                </span>
+
+                <strong id="pythonVersion">
+                    -
+                </strong>
+
+            </div>
+
+
+            <div class="system-item">
+
+                <span>
+                    Environment
+                </span>
+
+                <strong id="runtimeEnvironment">
+                    -
+                </strong>
+
+            </div>
+
+        </div>
+
+    </section>
+
+
+    <section class="api-panel">
+
+        <p class="eyebrow">
+            API ENDPOINTS
+        </p>
+
+        <div class="api-list">
+
+            <code>
+                GET /api/status
+            </code>
+
+            <code>
+                GET /api/skills
+            </code>
+
+            <code>
+                GET /api/pipeline
+            </code>
+
+            <code>
+                GET /health
+            </code>
+
+        </div>
+
+    </section>
+
+</main>
+
+
+<footer class="footer">
+
+    <p>
+        © {{ year }} Karan DevOps Dashboard
+    </p>
+
+    <p>
+        Built for practical DevOps learning
+    </p>
+
+</footer>
+
+
+<script
+    src="{{ url_for(
+        'static',
+        filename='js/app.js'
+    ) }}"
+></script>
+
+</body>
+
+</html>
