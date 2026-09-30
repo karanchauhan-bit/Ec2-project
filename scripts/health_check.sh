@@ -3,11 +3,9 @@
 set -e
 
 NAMESPACE="${K8S_NAMESPACE:-karan-dashboard}"
-
 SERVICE_NAME="karan-devops-dashboard-service"
 
 LOCAL_PORT="5050"
-
 SERVICE_PORT="5000"
 
 APP_URL="http://localhost:${LOCAL_PORT}/health"
@@ -25,20 +23,12 @@ echo "Local Port:   $LOCAL_PORT"
 echo "Service Port: $SERVICE_PORT"
 echo
 
-# --------------------------------------------------
-# 1. Check Kubernetes Pods
-# --------------------------------------------------
-
 echo "1. Checking Kubernetes pods..."
 
 kubectl get pods \
     -n "$NAMESPACE"
 
 echo
-
-# --------------------------------------------------
-# 2. Check Kubernetes Service
-# --------------------------------------------------
 
 echo "2. Checking Kubernetes service..."
 
@@ -48,24 +38,17 @@ kubectl get svc \
 
 echo
 
-# --------------------------------------------------
-# 3. Stop existing port-forward
-# --------------------------------------------------
-
 echo "3. Stopping existing port-forward if running..."
 
-pkill -f \
-    "kubectl port-forward.*${SERVICE_NAME}" \
-    || true
+pkill -f "kubectl port-forward.*${SERVICE_NAME}" || true
 
 sleep 2
 
-# --------------------------------------------------
-# 4. Start port-forward
-# --------------------------------------------------
+echo
 
 echo "4. Starting Kubernetes port-forward..."
 
+JENKINS_NODE_COOKIE=dontKillMe \
 nohup kubectl port-forward \
     "svc/${SERVICE_NAME}" \
     "${LOCAL_PORT}:${SERVICE_PORT}" \
@@ -76,11 +59,8 @@ PORT_FORWARD_PID=$!
 
 echo "Port-forward PID: $PORT_FORWARD_PID"
 
-# --------------------------------------------------
-# 5. Wait for application
-# --------------------------------------------------
-
 echo
+
 echo "5. Waiting for application..."
 
 HEALTH_CHECK_PASSED=false
@@ -88,8 +68,7 @@ HEALTH_CHECK_PASSED=false
 for i in {1..15}
 do
 
-    if curl -sf \
-        "$APP_URL" \
+    if curl -sf "$APP_URL" \
         > /tmp/karan-health-response.json
     then
 
@@ -97,8 +76,8 @@ do
 
         echo
         echo "Health check passed."
-        echo
 
+        echo
         cat /tmp/karan-health-response.json
 
         break
@@ -110,9 +89,6 @@ do
 
 done
 
-# --------------------------------------------------
-# 6. Handle health-check failure
-# --------------------------------------------------
 
 if [ "$HEALTH_CHECK_PASSED" = false ]; then
 
@@ -123,6 +99,7 @@ if [ "$HEALTH_CHECK_PASSED" = false ]; then
 
     echo
     echo "Port-forward log:"
+
     cat "$PORT_FORWARD_LOG" || true
 
     echo
@@ -153,9 +130,6 @@ if [ "$HEALTH_CHECK_PASSED" = false ]; then
 
 fi
 
-# --------------------------------------------------
-# 7. Success
-# --------------------------------------------------
 
 echo
 echo "=========================================="
@@ -173,6 +147,10 @@ echo "$APP_URL"
 echo
 echo "Port-forward PID:"
 echo "$PORT_FORWARD_PID"
+
+echo
+echo "Port-forward log:"
+echo "$PORT_FORWARD_LOG"
 
 echo
 echo "=========================================="
