@@ -2,119 +2,177 @@
 
 set -e
 
-
 NAMESPACE="${K8S_NAMESPACE:-karan-dashboard}"
 
-SERVICE_NAME="${K8S_SERVICE_NAME:-karan-devops-dashboard-service}"
+SERVICE_NAME="karan-devops-dashboard-service"
 
-LOCAL_PORT="${LOCAL_PORT:-5050}"
+LOCAL_PORT="5050"
 
-REMOTE_PORT=5000
+SERVICE_PORT="5000"
 
-MAX_ATTEMPTS=10
+APP_URL="http://localhost:${LOCAL_PORT}/health"
 
-WAIT_SECONDS=3
-
-TEMP_FILE="/tmp/karan-devops-health.json"
-
-PORT_FORWARD_LOG="/tmp/karan-devops-port-forward.log"
-
+PORT_FORWARD_LOG="${WORKSPACE:-/tmp}/karan-health-port-forward.log"
 
 echo "=========================================="
-
 echo "Karan DevOps Dashboard Health Check"
-
 echo "=========================================="
 
+echo
+echo "Namespace:    $NAMESPACE"
+echo "Service:      $SERVICE_NAME"
+echo "Local Port:   $LOCAL_PORT"
+echo "Service Port: $SERVICE_PORT"
+echo
+
+# --------------------------------------------------
+# 1. Check Kubernetes Pods
+# --------------------------------------------------
+
+echo "1. Checking Kubernetes pods..."
+
+kubectl get pods \
+    -n "$NAMESPACE"
 
 echo
 
-echo "Waiting for Kubernetes Deployment..."
+# --------------------------------------------------
+# 2. Check Kubernetes Service
+# --------------------------------------------------
 
+echo "2. Checking Kubernetes service..."
 
-kubectl rollout status \
-    deployment/karan-devops-dashboard \
-    -n "$NAMESPACE" \
-    --timeout=180s
-
+kubectl get svc \
+    "$SERVICE_NAME" \
+    -n "$NAMESPACE"
 
 echo
 
-echo "Starting temporary port-forward..."
+# --------------------------------------------------
+# 3. Stop existing port-forward
+# --------------------------------------------------
 
+echo "3. Stopping existing port-forward if running..."
 
-kubectl port-forward \
-    "service/$SERVICE_NAME" \
-    "$LOCAL_PORT:$REMOTE_PORT" \
+pkill -f \
+    "kubectl port-forward.*${SERVICE_NAME}" \
+    || true
+
+sleep 2
+
+# --------------------------------------------------
+# 4. Start port-forward
+# --------------------------------------------------
+
+echo "4. Starting Kubernetes port-forward..."
+
+nohup kubectl port-forward \
+    "svc/${SERVICE_NAME}" \
+    "${LOCAL_PORT}:${SERVICE_PORT}" \
     -n "$NAMESPACE" \
-    >"$PORT_FORWARD_LOG" 2>&1 &
-
+    > "$PORT_FORWARD_LOG" 2>&1 &
 
 PORT_FORWARD_PID=$!
 
+echo "Port-forward PID: $PORT_FORWARD_PID"
 
-cleanup() {
+# --------------------------------------------------
+# 5. Wait for application
+# --------------------------------------------------
 
-    kill "$PORT_FORWARD_PID" \
-        2>/dev/null \
-        || true
+echo
+echo "5. Waiting for application..."
 
-    rm -f "$TEMP_FILE"
-}
+HEALTH_CHECK_PASSED=false
 
+for i in {1..15}
+do
 
-trap cleanup EXIT
+    if curl -sf \
+        "$APP_URL" \
+        > /tmp/karan-health-response.json
+    then
 
-
-echo "Checking application health..."
-
-
-for ((attempt=1; attempt<=MAX_ATTEMPTS; attempt++)); do
-
-    echo "Attempt $attempt/$MAX_ATTEMPTS..."
-
-
-    if curl \
-        --silent \
-        --show-error \
-        --fail \
-        --max-time 5 \
-        "http://127.0.0.1:${LOCAL_PORT}/health" \
-        -o "$TEMP_FILE"; then
+        HEALTH_CHECK_PASSED=true
 
         echo
-
-        echo "Health endpoint response:"
-
-        cat "$TEMP_FILE"
-
-        echo
-
-        echo
-
         echo "Health check passed."
+        echo
 
-        exit 0
+        cat /tmp/karan-health-response.json
 
+        break
     fi
 
+    echo "Attempt $i/15 failed. Waiting 2 seconds..."
 
-    sleep "$WAIT_SECONDS"
+    sleep 2
 
 done
 
+# --------------------------------------------------
+# 6. Handle health-check failure
+# --------------------------------------------------
+
+if [ "$HEALTH_CHECK_PASSED" = false ]; then
+
+    echo
+    echo "=========================================="
+    echo "Health check FAILED."
+    echo "=========================================="
+
+    echo
+    echo "Port-forward log:"
+    cat "$PORT_FORWARD_LOG" || true
+
+    echo
+    echo "Kubernetes pods:"
+
+    kubectl get pods \
+        -n "$NAMESPACE" \
+        -o wide \
+        || true
+
+    echo
+    echo "Kubernetes service:"
+
+    kubectl get svc \
+        "$SERVICE_NAME" \
+        -n "$NAMESPACE" \
+        || true
+
+    echo
+    echo "Application pod details:"
+
+    kubectl describe pods \
+        -n "$NAMESPACE" \
+        -l app=karan-devops-dashboard \
+        || true
+
+    exit 1
+
+fi
+
+# --------------------------------------------------
+# 7. Success
+# --------------------------------------------------
 
 echo
-
-echo "Health check failed."
-
+echo "=========================================="
+echo "Application is healthy."
+echo "=========================================="
 
 echo
+echo "Application URL:"
+echo "http://localhost:${LOCAL_PORT}"
 
-echo "Port-forward log:"
+echo
+echo "Health URL:"
+echo "$APP_URL"
 
-cat "$PORT_FORWARD_LOG" \
-    || true
+echo
+echo "Port-forward PID:"
+echo "$PORT_FORWARD_PID"
 
-
-exit 1
+echo
+echo "=========================================="
