@@ -2,19 +2,14 @@ pipeline {
 
     agent any
 
-
     options {
-
         skipDefaultCheckout(true)
-
         timestamps()
     }
 
-
     environment {
-
         IMAGE_REPO =
-            "YOUR_DOCKERHUB_USERNAME/karan-devops-dashboard"
+            "karan1989/karan-devops-dashboard"
 
         IMAGE_TAG =
             "${BUILD_NUMBER}"
@@ -23,25 +18,18 @@ pipeline {
             "karan-dashboard"
     }
 
-
     stages {
 
-
         stage("Checkout") {
-
             steps {
-
                 echo "Downloading source code from GitHub..."
 
                 checkout scm
             }
         }
 
-
         stage("Python Syntax Check") {
-
             steps {
-
                 echo "Checking Python syntax..."
 
                 sh """
@@ -50,15 +38,25 @@ pipeline {
             }
         }
 
+        stage("Install Dependencies") {
+            steps {
+                echo "Installing Python dependencies..."
+
+                sh """
+                    python3 -m venv .jenkins-venv
+
+                    .jenkins-venv/bin/pip install \
+                        -r requirements.txt
+                """
+            }
+        }
 
         stage("Run Tests") {
-
             steps {
-
                 echo "Running Python unit tests..."
 
                 sh """
-                    python3 \
+                    .jenkins-venv/bin/python \
                     -m unittest \
                     discover \
                     -s tests \
@@ -67,11 +65,8 @@ pipeline {
             }
         }
 
-
         stage("Build Docker Image") {
-
             steps {
-
                 echo "Building Docker image..."
 
                 sh """
@@ -83,11 +78,8 @@ pipeline {
             }
         }
 
-
         stage("Push Docker Image") {
-
             steps {
-
                 echo "Pushing Docker image to Docker Hub..."
 
                 withCredentials(
@@ -125,11 +117,8 @@ pipeline {
             }
         }
 
-
         stage("Deploy to Kubernetes") {
-
             steps {
-
                 echo "Deploying application to Kubernetes..."
 
                 sh '''
@@ -143,11 +132,8 @@ pipeline {
             }
         }
 
-
         stage("Health Check") {
-
             steps {
-
                 echo "Checking Kubernetes application health..."
 
                 sh '''
@@ -160,11 +146,9 @@ pipeline {
         }
     }
 
-
     post {
 
         success {
-
             echo """
                 ==========================================
                 Karan DevOps Dashboard
@@ -179,9 +163,7 @@ pipeline {
             """
         }
 
-
         failure {
-
             echo """
                 ==========================================
                 Jenkins pipeline failed.
@@ -191,9 +173,7 @@ pipeline {
             """
         }
 
-
         always {
-
             sh '''
                 echo "Kubernetes Pods:"
 
