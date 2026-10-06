@@ -50,6 +50,7 @@ echo "4. Starting Kubernetes port-forward..."
 
 JENKINS_NODE_COOKIE=dontKillMe \
 nohup kubectl port-forward \
+    --address 0.0.0.0 \
     "svc/${SERVICE_NAME}" \
     "${LOCAL_PORT}:${SERVICE_PORT}" \
     -n "$NAMESPACE" \
